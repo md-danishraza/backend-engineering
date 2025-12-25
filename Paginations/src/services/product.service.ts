@@ -31,3 +31,34 @@ export const getPaginatedProducts = async (page: number, limit: number) => {
     },
   };
 };
+
+export const getProductsCursor = async (limit: number, cursor?: number) => {
+  // Fetch one extra item to check if there is a next page
+  const items = await prisma.product.findMany({
+    take: limit + 1,
+    skip: cursor ? 1 : 0,
+    cursor: cursor ? { id: cursor } : undefined,
+    orderBy: {
+      id: "asc",
+    },
+  });
+
+  let nextCursor: number | undefined = undefined;
+
+  // if next page items exist
+  if (items.length > limit) {
+    // removing extra item
+    const nextItem = items.pop();
+    // giving last item id
+    nextCursor = items[items.length - 1].id;
+  }
+
+  return {
+    data: items,
+    meta: {
+      nextCursor,
+      // boolean
+      hasNextPage: nextCursor !== undefined,
+    },
+  };
+};

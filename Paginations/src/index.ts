@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 
-import { listProducts } from "./controllers/products.js";
+import { listProducts, listProductsInfinite } from "./controllers/products.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,7 +9,10 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 // Routes
+// page based
 app.get("/products", listProducts);
+// cursor based
+app.get("/products/infinite", listProductsInfinite);
 
 // Health Check
 app.get("/", (req: Request, res: Response) => {

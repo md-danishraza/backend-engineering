@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
-import { getPaginatedProducts } from "../services/product.service.js";
+import {
+  getPaginatedProducts,
+  getProductsCursor,
+} from "../services/product.service.js";
 
 export const listProducts = async (req: Request, res: Response) => {
   try {
@@ -21,6 +24,19 @@ export const listProducts = async (req: Request, res: Response) => {
     const result = await getPaginatedProducts(page, limit);
 
     // 4. Send Response
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
+// Handler for Cursor-Based (Infinite)
+export const listProductsInfinite = async (req: Request, res: Response) => {
+  try {
+    const limit = Number(req.query.limit) || 10;
+    const cursor = req.query.cursor ? Number(req.query.cursor) : undefined;
+
+    const result = await getProductsCursor(limit, cursor);
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: "Something went wrong" });
