@@ -6,6 +6,8 @@ import express, { Request, Response } from "express";
 
 // routes
 import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/authRoutes.js";
+import { authMiddleware } from "./middlewares/auth.js";
 
 const app = express();
 
@@ -17,6 +19,7 @@ app.get("/", (req: Request, res: Response) => {
   res.status(200).send("hello from server!!");
 });
 app.get("/auth", authRoutes);
+app.get("/users", authMiddleware, userRoutes);
 
 const PORT = 3000;
 app.listen(PORT, () => {

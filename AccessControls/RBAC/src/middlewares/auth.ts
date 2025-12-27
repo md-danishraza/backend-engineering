@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
+// for only protected routes
 export const authMiddleware = (
   req: Request,
   res: Response,
@@ -19,4 +20,15 @@ export const authMiddleware = (
   } catch {
     res.status(401).json({ message: "Invalid token" });
   }
+};
+
+// for dynamic autharization
+export const authRoles = (...roles: string[]) => {
+  // returning the request
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!roles.includes((req as any).user.role)) {
+      return res.status(403).json({ message: "Access denied!" });
+    }
+    next();
+  };
 };
