@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      table {
+        width: 300px;
+      }
+      table,
+      th,
+      td {
+        border: 1px solid black;
+        padding: 8px;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      tr:nth-child(2n + 1) {
+        background-color: #979393;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Chatting</h1>
+    <input type="text" id="message" />
+    <button id="submit">submit</button>
+    <table></table>
+  </body>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    document.getElementById("submit").addEventListener("click", () => {
+      const message = document.getElementById("message").value;
+      socket.emit("chat message", message);
+    });
+    socket.on("message", (message) => {
+      const chat = document.createElement("tr");
+      const table = document.querySelector("table");
+      chat.textContent = message;
+      table.appendChild(chat);
+    });
+  </script>
+</html>
