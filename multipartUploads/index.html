@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multipart Uploads: Interactive Architecture & Visual Guide</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+            <line x1="4" y1="12" x2="8" y2="12"/>
+            <line x1="16" y1="12" x2="20" y2="12"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">Multipart Uploads</span>
+          <span class="brand-badge">Visual Architecture</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#simulator" class="nav-link active">Simulator</a>
+        <a href="#workflow" class="nav-link">5-Step Lifecycle</a>
+        <a href="#comparison" class="nav-link">Single vs Multipart</a>
+        <a href="#code-viewer" class="nav-link">Code Snippets</a>
+        <a href="#concepts" class="nav-link">Key Concepts</a>
+        <a href="#quiz" class="nav-link">Knowledge Check</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button id="themeToggleBtn" class="btn btn-icon" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
+          <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-tag">
+        <span class="pulse-dot"></span>
+        Backend Engineering & Distributed Cloud Storage
+      </div>
+      <h1 class="hero-title">
+        How <span class="gradient-text">Multipart Uploads</span> Work Under the Hood
+      </h1>
+      <p class="hero-desc">
+        Uploading gigabytes or terabytes via a single HTTP request is fragile, slow, and memory-intensive.
+        Explore how modern distributed systems slice large files into independent chunks, upload them concurrently via presigned URLs,
+        recover from network failures without restarting, and stitch them seamlessly in cloud object storage (e.g. AWS S3, GCS, Azure Blob, MinIO).
+      </p>
+
+      <div class="hero-badges">
+        <div class="hero-badge">
+          <span class="badge-icon">⚡</span>
+          <div>
+            <strong>Concurrent Streams</strong>
+            <span>Upload multiple parts simultaneously</span>
+          </div>
+        </div>
+        <div class="hero-badge">
+          <span class="badge-icon">🛡️</span>
+          <div>
+            <strong>Fault Tolerant</strong>
+            <span>Retry only failed 5MB chunks, not 5GB</span>
+          </div>
+        </div>
+        <div class="hero-badge">
+          <span class="badge-icon">💾</span>
+          <div>
+            <strong>Zero Memory Bloat</strong>
+            <span>Browser streaming via <code>Blob.slice()</code></span>
+          </div>
+        </div>
+        <div class="hero-badge">
+          <span class="badge-icon">🚀</span>
+          <div>
+            <strong>Direct to S3</strong>
+            <span>Bypass web server bandwidth limits</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 1: Interactive Visual Simulator -->
+  <section id="simulator" class="section">
+    <div class="section-header">
+      <div class="section-title-wrap">
+        <span class="section-number">01</span>
+        <div>
+          <h2 class="section-title">Interactive Visual Simulator</h2>
+          <p class="section-subtitle">Real-time simulation of chunk slicing, concurrency, presigning, and object assembly</p>
+        </div>
+      </div>
+      <div class="status-indicator">
+        <span class="status-dot" id="simStatusDot"></span>
+        <span class="status-label" id="simStatusLabel">Status: Ready to Upload</span>
+      </div>
+    </div>
+
+    <!-- Simulator Control Dashboard -->
+    <div class="sim-dashboard">
+      <div class="card control-panel">
+        <div class="control-grid">
+          <!-- File Preset -->
+          <div class="control-group">
+            <label for="filePresetSelect">
+              <span class="label-title">File Preset</span>
+              <span class="label-hint">Simulated upload target</span>
+            </label>
+            <select id="filePresetSelect" class="form-select">
+              <option value="video" selected>🎬 4K Raw Drone Footage (1.2 GB)</option>
+              <option value="database">💾 PostgreSQL Production Dump (600 MB)</option>
+              <option value="vmimage">📦 Linux VM Virtual Disk (3.2 GB)</option>
+              <option value="archive">📚 Compressed Archives Zip (250 MB)</option>
+              <option value="custom">⚙️ Custom File Size & Chunks</option>
+            </select>
+          </div>
+
+          <!-- Chunk Size -->
+          <div class="control-group" id="chunkSizeGroup">
+            <label for="chunkSizeSelect">
+              <span class="label-title">Chunk Size</span>
+              <span class="label-hint">S3 min: 5 MB</span>
+            </label>
+            <select id="chunkSizeSelect" class="form-select">
+              <option value="25">25 MB per part (Fastest)</option>
+              <option value="50" selected>50 MB per part (Standard)</option>
+              <option value="100">100 MB per part</option>
+              <option value="10">10 MB per part (Granular)</option>
+            </select>
+          </div>
+
+          <!-- Concurrency Workers -->
+          <div class="control-group">
+            <label for="concurrencyRange">
+              <span class="label-title">Upload Concurrency</span>
+              <span class="label-hint"><span id="concurrencyValue">3</span> parallel streams</span>
+            </label>
+            <input type="range" id="concurrencyRange" min="1" max="5" value="3" class="form-range">
+          </div>
+
+          <!-- Network Flakiness / Chaos -->
+          <div class="control-group">
+            <label for="networkConditionSelect">
+              <span class="label-title">Network Condition</span>
+              <span class="label-hint">Simulate real-world conditions</span>
+            </label>
+            <select id="networkConditionSelect" class="form-select">
+              <option value="fiber" selected>🚀 Fiber Optic (Fast & Stable)</option>
+              <option value="cable">📶 4G / Cable (Moderate Latency)</option>
+              <option value="flaky">⚠️ Flaky Mobile 3G (15% Packet Drop)</option>
+              <option value="chaos">🔥 Chaos Mode (35% Failure & Auto-Retry)</option>
+            </select>
+          </div>
+
+          <!-- Simulation Speed (0.25x Default) -->
+          <div class="control-group">
+            <label>
+              <span class="label-title">Simulation Speed</span>
+              <span class="label-hint">Pacing: <strong id="speedLabel" class="text-accent">0.25x (Super Slow)</strong></span>
+            </label>
+            <div class="speed-btn-group" id="speedBtnGroup">
+              <button type="button" class="speed-btn active" data-speed="0.25" title="0.25x - Slow motion for inspecting packets & steps">0.25x</button>
+              <button type="button" class="speed-btn" data-speed="0.5" title="0.5x - Half speed">0.5x</button>
+              <button type="button" class="speed-btn" data-speed="1" title="1.0x - Realtime">1.0x</button>
+              <button type="button" class="speed-btn" data-speed="2" title="2.0x - Fast forward">2.0x</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom File Row (Initially Hidden) -->
+        <div id="customFileRow" class="custom-file-row hidden">
+          <div class="custom-input-group">
+            <label>Total Size (MB):</label>
+            <input type="number" id="customFileSize" value="800" min="50" max="10000" class="form-input">
+          </div>
+          <div class="custom-input-group">
+            <label>Part Size (MB):</label>
+            <input type="number" id="customPartSize" value="50" min="5" max="500" class="form-input">
+          </div>
+          <button id="applyCustomBtn" class="btn btn-secondary">Apply Settings</button>
+        </div>
+
+        <!-- Action Control Buttons -->
+        <div class="control-actions">
+          <button id="startBtn" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            Start Upload
+          </button>
+          <button id="pauseBtn" class="btn btn-secondary" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="4" width="4" height="16"/>
+              <rect x="14" y="4" width="4" height="16"/>
+            </svg>
+            Pause
+          </button>
+          <button id="stepBtn" class="btn btn-secondary" title="Execute single upload cycle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 4 15 12 5 20 5 4"/>
+              <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            Step
+          </button>
+          <button id="failNextBtn" class="btn btn-danger-outline" disabled title="Force network failure on the next active chunk to test retry">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="1" y1="1" x2="23" y2="23"/>
+              <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+              <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+              <path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
+              <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+              <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+              <line x1="12" y1="20" x2="12.01" y2="20"/>
+            </svg>
+            Simulate Drop on Active Part
+          </button>
+          <button id="resetBtn" class="btn btn-ghost">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            Reset
+          </button>
+          <button id="abortBtn" class="btn btn-ghost-danger" disabled title="Cancel upload and call S3 AbortMultipartUpload to purge parts">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+            Abort Session
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Animated Distributed Architecture Diagram -->
+    <div class="card architecture-canvas-card">
+      <div class="canvas-header">
+        <h3 class="card-title">Distributed Dataflow Architecture</h3>
+        <div class="canvas-legend">
+          <span class="legend-item"><span class="legend-color init"></span> Handshake & Presign</span>
+          <span class="legend-item"><span class="legend-color put"></span> Direct Part Stream (PUT)</span>
+          <span class="legend-item"><span class="legend-color etag"></span> ETag Acknowledgement</span>
+          <span class="legend-item"><span class="legend-color assemble"></span> Assembly Stitch</span>
+        </div>
+      </div>
+
+      <div class="architecture-diagram" id="archDiagram">
+        <!-- SVG Connections Layer -->
+        <svg class="arch-svg-layer" id="archSvg" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="gradClientToAuth" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#818cf8"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+            <linearGradient id="gradClientToStorage" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#34d399"/>
+              <stop offset="100%" stop-color="#10b981"/>
+            </linearGradient>
+            <linearGradient id="gradAuthToStorage" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#06b6d4"/>
+              <stop offset="100%" stop-color="#38bdf8"/>
+            </linearGradient>
+          </defs>
+          <!-- Connection Paths -->
+          <path id="pathClientToAuth" class="wire-path" d="" />
+          <path id="pathAuthToStorage" class="wire-path" d="" />
+          <path id="pathClientToStorage" class="wire-path direct-storage-wire" d="" />
+          
+          <!-- Animated Packet Particles will be dynamically injected here -->
+          <g id="packetContainer"></g>
+        </svg>
+
+        <!-- Node 1: Client Application -->
+        <div class="arch-node client-node" id="nodeClient">
+          <div class="node-header">
+            <div class="node-icon">💻</div>
+            <div>
+              <h4 class="node-title">Client Application</h4>
+              <span class="node-sub">Browser / Mobile / CLI</span>
+            </div>
+          </div>
+          <div class="node-body">
+            <div class="node-metric">
+              <span class="metric-label">File Slicing:</span>
+              <span class="metric-val" id="nodeClientSlicing"><code>Blob.slice()</code> ready</span>
+            </div>
+            <div class="node-metric">
+              <span class="metric-label">Active Workers:</span>
+              <span class="metric-val" id="nodeClientWorkers">0 / 3 active</span>
+            </div>
+            <div class="node-metric">
+              <span class="metric-label">Local Cache:</span>
+              <span class="metric-val" id="nodeClientCache">IndexedDB (Idle)</span>
+            </div>
+            <!-- Visual Worker Tracks -->
+            <div class="worker-tracks" id="workerTracksContainer">
+              <div class="worker-slot" id="workerSlot1"><span class="w-name">W1</span><span class="w-status">Idle</span></div>
+              <div class="worker-slot" id="workerSlot2"><span class="w-name">W2</span><span class="w-status">Idle</span></div>
+              <div class="worker-slot" id="workerSlot3"><span class="w-name">W3</span><span class="w-status">Idle</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Node 2: Backend Orchestrator / Auth Server -->
+        <div class="arch-node auth-node" id="nodeAuth">
+          <div class="node-header">
+            <div class="node-icon">⚙️</div>
+            <div>
+              <h4 class="node-title">Backend API / Auth</h4>
+              <span class="node-sub">Node.js Express / NestJS</span>
+            </div>
+          </div>
+          <div class="node-body">
+            <div class="node-metric">
+              <span class="metric-label">Auth & IAM:</span>
+              <span class="metric-val text-success">Verified JWT</span>
+            </div>
+            <div class="node-metric">
+              <span class="metric-label">S3 Session ID:</span>
+              <span class="metric-val text-mono" id="nodeAuthUploadId">None</span>
+            </div>
+            <div class="node-metric">
+              <span class="metric-label">Presigned URLs:</span>
+              <span class="metric-val" id="nodeAuthPresignedCount">0 issued</span>
+            </div>
+            <div class="node-pill-info">
+              💡 Bypassed during raw chunk transfer so backend server RAM & bandwidth stay 0%!
+            </div>
+          </div>
+        </div>
+
+        <!-- Node 3: Cloud Object Storage (S3) -->
+        <div class="arch-node storage-node" id="nodeStorage">
+          <div class="node-header">
+            <div class="node-icon">☁️</div>
+            <div>
+              <h4 class="node-title">Cloud Object Storage</h4>
+              <span class="node-sub">AWS S3 / GCS / Azure / MinIO</span>
+            </div>
+          </div>
+          <div class="node-body">
+            <div class="node-metric">
+              <span class="metric-label">Bucket:</span>
+              <span class="metric-val text-mono">s3://prod-media-vault</span>
+            </div>
+            <div class="node-metric">
+              <span class="metric-label">Staged Chunks:</span>
+              <span class="metric-val text-accent" id="nodeStoragePartsCount">0 parts</span>
+            </div>
+            <div class="node-metric">
+              <span class="metric-label">Final Object ETag:</span>
+              <span class="metric-val text-mono" id="nodeStorageFinalETag">Pending</span>
+            </div>
+            <div class="storage-staging-visual" id="storageStagingVisual">
+              <!-- Mini staged blocks in S3 -->
+              <span class="staging-empty">No chunks staged</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Breakdown, Chunk Matrix & Progress -->
+    <div class="sim-details-grid">
+      <!-- Left: File Chunks Visual Grid -->
+      <div class="card chunk-matrix-card">
+        <div class="card-header-flex">
+          <div>
+            <h3 class="card-title">File Slicing Matrix</h3>
+            <p class="card-desc">Click any chunk to inspect byte ranges, ETag hashes, and HTTP headers</p>
+          </div>
+          <div class="overall-progress-meta">
+            <span class="meta-label">Overall Progress</span>
+            <span class="meta-percent" id="overallPercent">0%</span>
+          </div>
+        </div>
+
+        <!-- Big Progress Bar -->
+        <div class="overall-progress-bar-wrap">
+          <div class="overall-progress-bar" id="overallProgressBar" style="width: 0%"></div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="sim-stats-bar">
+          <div class="stat-item">
+            <span class="stat-name">Uploaded:</span>
+            <span class="stat-value" id="statUploadedBytes">0 MB / 1,200 MB</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-name">Completed Parts:</span>
+            <span class="stat-value" id="statCompletedParts">0 / 24</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-name">Transfer Speed:</span>
+            <span class="stat-value" id="statSpeed">0 MB/s</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-name">Retries Triggered:</span>
+            <span class="stat-value text-warning" id="statRetries">0</span>
+          </div>
+        </div>
+
+        <!-- Chunks Grid -->
+        <div class="chunk-grid" id="chunkGrid">
+          <!-- Dynamically generated chunk items -->
+        </div>
+
+        <!-- Chunk State Legend -->
+        <div class="chunk-legend">
+          <span class="chunk-legend-item"><span class="chunk-chip pending"></span> Pending</span>
+          <span class="chunk-legend-item"><span class="chunk-chip slicing"></span> Slicing / Presigning</span>
+          <span class="chunk-legend-item"><span class="chunk-chip uploading"></span> In-Flight (PUT)</span>
+          <span class="chunk-legend-item"><span class="chunk-chip retry"></span> Dropped / Retrying</span>
+          <span class="chunk-legend-item"><span class="chunk-chip completed"></span> Completed (ETag Received)</span>
+        </div>
+      </div>
+
+      <!-- Right: Live Protocol Event Log & Wire Inspector -->
+      <div class="card telemetry-card">
+        <div class="card-header-flex">
+          <h3 class="card-title">Wire Protocol & Telemetry Log</h3>
+          <button id="clearLogBtn" class="btn btn-tiny btn-ghost">Clear Log</button>
+        </div>
+        <p class="card-desc">Live HTTP wire calls: Methods, S3 query params, ETags, and timestamps</p>
+        
+        <div class="telemetry-terminal" id="telemetryLog">
+          <div class="log-entry system">
+            <span class="log-time">[00:00:00]</span>
+            <span class="log-msg">Simulator initialized. Ready to initiate multipart session.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chunk Inspector Modal -->
+  <div class="modal-overlay hidden" id="chunkModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-badge" id="modalPartBadge">Part #1</span>
+          <h4 class="modal-title" id="modalPartTitle">Chunk Inspector</h4>
+        </div>
+        <button class="modal-close" id="modalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Full 5-Step Lifecycle Walkthrough -->
+  <section id="workflow" class="section">
+    <div class="section-header">
+      <div class="section-title-wrap">
+        <span class="section-number">02</span>
+        <div>
+          <h2 class="section-title">The 5-Step Multipart Upload Lifecycle</h2>
+          <p class="section-subtitle">Deep dive into each technical phase of distributed chunked uploads</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="lifecycle-timeline">
+      <!-- Step 1 -->
+      <div class="lifecycle-step active">
+        <div class="step-indicator">
+          <span class="step-num">1</span>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-card">
+          <div class="step-card-header">
+            <div class="step-title-wrap">
+              <span class="step-tag tag-init">Step 1: Session Initiation</span>
+              <h3 class="step-name">CreateMultipartUpload Handshake</h3>
+            </div>
+            <span class="step-method">POST /file.mp4?uploads</span>
+          </div>
+          <p class="step-text">
+            The client requests an upload session from the backend API. The backend contacts AWS S3 with the target bucket, object key, metadata, and ACL.
+            S3 generates and returns a unique, cryptographically random <code>UploadId</code>. This ID acts as the global transaction coordinator key for all future parts.
+          </p>
+          <div class="step-technical-box">
+            <div class="tech-row">
+              <strong>Input Parameters:</strong> <code>Bucket: "media-vault"</code>, <code>Key: "videos/drone-4k.mp4"</code>, <code>ContentType: "video/mp4"</code>
+            </div>
+            <div class="tech-row">
+              <strong>Storage Response:</strong> Returns <code>UploadId: "VXBsb2FkIElEIGV4YW1wbGU..."</code>
+            </div>
+            <div class="tech-row">
+              <strong>Key Concept:</strong> No storage blocks are allocated yet. S3 creates an internal staging manifest tracking incoming parts.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="lifecycle-step">
+        <div class="step-indicator">
+          <span class="step-num">2</span>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-card">
+          <div class="step-card-header">
+            <div class="step-title-wrap">
+              <span class="step-tag tag-slice">Step 2: Client-side Slicing</span>
+              <h3 class="step-name">Zero-Copy Binary Chunking via <code>Blob.slice()</code></h3>
+            </div>
+            <span class="step-method">Browser Web API</span>
+          </div>
+          <p class="step-text">
+            Reading an entire 10 GB file into JavaScript memory would crash the browser tab with an <code>Out of Memory (OOM)</code> exception.
+            Instead, modern browsers use the zero-copy <code>File.prototype.slice(startByte, endByte)</code> pointer.
+            Chunks are extracted as lightweight <code>Blob</code> references only when a worker thread is ready to stream the bytes.
+          </p>
+          <div class="step-technical-box">
+            <div class="tech-row">
+              <strong>Byte Offsets:</strong> <code>start = (partNumber - 1) * chunkSize</code>, <code>end = Math.min(file.size, start + chunkSize)</code>
+            </div>
+            <div class="tech-row">
+              <strong>S3 Minimum Rule:</strong> Every part <em>except the last part</em> must be at least <strong>5 MB</strong>. The maximum part size is <strong>5 GB</strong>.
+            </div>
+            <div class="tech-row">
+              <strong>Part Indexing:</strong> S3 part numbers are <strong>1-indexed</strong> (ranging strictly from <code>1</code> to <code>10,000</code>).
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="lifecycle-step">
+        <div class="step-indicator">
+          <span class="step-num">3</span>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-card">
+          <div class="step-card-header">
+            <div class="step-title-wrap">
+              <span class="step-tag tag-presign">Step 3: Security & Presigning</span>
+              <h3 class="step-name">Presigned Direct-to-Cloud PUT URLs</h3>
+            </div>
+            <span class="step-method">AWS Signature Version 4 (SigV4)</span>
+          </div>
+          <p class="step-text">
+            Never embed AWS IAM credentials (Access Key & Secret Key) inside frontend client code!
+            Instead, the client requests temporary, cryptographically signed URLs from your backend.
+            Each presigned URL grants write permission <em>only</em> for a specific <code>partNumber</code> and <code>uploadId</code> for a short expiration window (e.g. 15 minutes).
+          </p>
+          <div class="step-technical-box">
+            <div class="tech-row">
+              <strong>URL Signature:</strong> <code>https://bucket.s3.amazonaws.com/key?partNumber=2&uploadId=xyz&X-Amz-Signature=...</code>
+            </div>
+            <div class="tech-row">
+              <strong>Architectural Win:</strong> Chunks upload directly from client browser to S3. Your Node.js backend handles 0 GB of file proxy traffic!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="lifecycle-step">
+        <div class="step-indicator">
+          <span class="step-num">4</span>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-card">
+          <div class="step-card-header">
+            <div class="step-title-wrap">
+              <span class="step-tag tag-upload">Step 4: Concurrent Upload & ETags</span>
+              <h3 class="step-name">Parallel Transfer, Checksumming & Auto-Retry</h3>
+            </div>
+            <span class="step-method">PUT /key?partNumber=N&uploadId=...</span>
+          </div>
+          <p class="step-text">
+            Client workers spawn multiple concurrent HTTP PUT streams (typically 3 to 6 concurrent connections to avoid TCP contention).
+            When a part successfully lands in S3, S3 computes its MD5 checksum and returns it in the <code>ETag</code> response header.
+            The client stores each <code>{ PartNumber, ETag }</code> in memory and IndexedDB. If any chunk fails (network drop, timeout), only that individual chunk is retried with exponential backoff!
+          </p>
+          <div class="step-technical-box">
+            <div class="tech-row">
+              <strong>Response Header:</strong> <code>ETag: "1b2cf535f27731c974343645a3985328"</code>
+            </div>
+            <div class="tech-row">
+              <strong>Integrity Verification:</strong> Client can provide <code>Content-MD5</code> or <code>x-amz-checksum-sha256</code> headers so S3 rejects corrupted packets.
+            </div>
+            <div class="tech-row">
+              <strong>Fault Isolation:</strong> Failure rate of 1 chunk out of 200 causes a 0.5% re-upload, rather than a 100% restart of the entire file.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="lifecycle-step">
+        <div class="step-indicator">
+          <span class="step-num">5</span>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-card">
+          <div class="step-card-header">
+            <div class="step-title-wrap">
+              <span class="step-tag tag-complete">Step 5: Assembly & Completion</span>
+              <h3 class="step-name">CompleteMultipartUpload & Compound ETag</h3>
+            </div>
+            <span class="step-method">POST /file.mp4?uploadId=...</span>
+          </div>
+          <p class="step-text">
+            Once all chunks have succeeded, the client sends a completion manifest containing the list of all part numbers and their respective ETags, sorted in ascending order.
+            S3 verifies all parts exist, stitches the chunk blocks internally into a single coherent object, and generates a final compound ETag.
+          </p>
+          <div class="step-technical-box">
+            <div class="tech-row">
+              <strong>XML Manifest:</strong> <code>&lt;CompleteMultipartUpload&gt;&lt;Part&gt;&lt;PartNumber&gt;1&lt;/PartNumber&gt;&lt;ETag&gt;"hash1"&lt;/ETag&gt;&lt;/Part&gt;...&lt;/CompleteMultipartUpload&gt;</code>
+            </div>
+            <div class="tech-row">
+              <strong>Compound ETag Suffix:</strong> Notice how S3 multipart objects have ETags like <code>"c4ca4238a0b923820dcc509a6f75849b-24"</code>! The <code>-24</code> indicates the object was assembled from 24 parts.
+            </div>
+            <div class="tech-row">
+              <strong>Internal Storage Assembly:</strong> Modern cloud file systems do not copy bytes around; they stitch internal inode/block pointers in milliseconds!
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Head-to-Head Comparison: Single vs Multipart -->
+  <section id="comparison" class="section">
+    <div class="section-header">
+      <div class="section-title-wrap">
+        <span class="section-number">03</span>
+        <div>
+          <h2 class="section-title">Head-to-Head: Monolithic vs. Multipart Upload</h2>
+          <p class="section-subtitle">Experience the failure mode: What happens when connection drops at 85%?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison Race Simulation Box -->
+    <div class="card comparison-race-card">
+      <div class="race-header">
+        <div>
+          <h3 class="card-title">Live Race: 5 GB Upload Over Unstable Connection</h3>
+          <p class="card-desc">Click "Trigger Network Disruption" mid-flight to see resilience in action</p>
+        </div>
+        <div class="race-buttons">
+          <button id="startRaceBtn" class="btn btn-primary">Start Race Simulation</button>
+          <button id="disruptRaceBtn" class="btn btn-danger-outline" disabled>⚡ Trigger Network Glitch</button>
+          <button id="resetRaceBtn" class="btn btn-ghost">Reset Race</button>
+        </div>
+      </div>
+
+      <div class="race-grid">
+        <!-- Track 1: Monolithic -->
+        <div class="race-track">
+          <div class="race-track-header">
+            <div class="track-tag tag-single">Traditional Single HTTP PUT</div>
+            <span class="track-state" id="singleStateText">Idle</span>
+          </div>
+          <div class="track-visual-bar-wrap">
+            <div class="track-visual-bar single-bar" id="singleProgressBar" style="width: 0%"></div>
+            <div class="track-glitch-marker" style="left: 78%">Glitch Point (78%)</div>
+          </div>
+          <div class="track-stats">
+            <span>Progress: <strong id="singlePercent">0%</strong></span>
+            <span>Bytes Transferred: <strong id="singleBytes">0 / 5,000 MB</strong></span>
+            <span>Outcome: <strong id="singleOutcome" class="text-muted">Awaiting start</strong></span>
+          </div>
+          <div class="track-callout failure-callout hidden" id="singleFailCallout">
+            ❌ <strong>Fatal Failure!</strong> Connection dropped at 3.9 GB. Because it was a single stream, the TCP connection was severed. The server discarded the partial payload. <strong>Must restart from 0%!</strong>
+          </div>
+        </div>
+
+        <!-- Track 2: Multipart -->
+        <div class="race-track">
+          <div class="race-track-header">
+            <div class="track-tag tag-multi">Multipart Concurrent Upload</div>
+            <span class="track-state" id="multiStateText">Idle</span>
+          </div>
+          <div class="track-visual-bar-wrap">
+            <div class="track-visual-bar multi-bar" id="multiProgressBar" style="width: 0%"></div>
+            <div class="track-glitch-marker" style="left: 78%">Glitch Point (78%)</div>
+          </div>
+          <div class="track-stats">
+            <span>Progress: <strong id="multiPercent">0%</strong></span>
+            <span>Bytes Transferred: <strong id="multiBytes">0 / 5,000 MB</strong></span>
+            <span>Outcome: <strong id="multiOutcome" class="text-muted">Awaiting start</strong></span>
+          </div>
+          <div class="track-callout success-callout hidden" id="multiSuccessCallout">
+            ✅ <strong>Resilient Recovery!</strong> Network dropped chunk #16 (50 MB). Chunks 1-15 remained safely stored in S3. <strong>Only chunk #16 was retried!</strong> Upload completed smoothly.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison Matrix Table -->
+    <div class="card comparison-table-card">
+      <h3 class="card-title">Architectural Trade-Off Matrix</h3>
+      <div class="table-responsive">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Evaluation Metric</th>
+              <th>Standard Monolithic Upload (Single PUT)</th>
+              <th>Multipart Upload (Chunked S3 Protocol)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Maximum File Size</strong></td>
+              <td><span class="badge-danger">5 GB max</span> (Strict AWS S3 PUT limit)</td>
+              <td><span class="badge-success">5 TB max</span> (10,000 parts &times; 5 GB)</td>
+            </tr>
+            <tr>
+              <td><strong>Network Failure Penalty</strong></td>
+              <td><span class="badge-danger">100% Data Loss</span> (Restart entire upload)</td>
+              <td><span class="badge-success">Per-Chunk Retry</span> (Re-upload only 5-50 MB)</td>
+            </tr>
+            <tr>
+              <td><strong>Throughput & Bandwidth</strong></td>
+              <td><span class="badge-warning">Single TCP Stream</span> (Bottlenecked by BDP)</td>
+              <td><span class="badge-success">Multi-Stream Parallelism</span> (3-6x faster)</td>
+            </tr>
+            <tr>
+              <td><strong>App Server Resource Usage</strong></td>
+              <td><span class="badge-danger">High RAM & Bandwidth</span> (Proxying GBs)</td>
+              <td><span class="badge-success">Zero Proxy Overhead</span> (Direct to Cloud)</td>
+            </tr>
+            <tr>
+              <td><strong>Session Resumability</strong></td>
+              <td><span class="badge-danger">Impossible</span> (Tab close destroys upload)</td>
+              <td><span class="badge-success">Native Resume</span> (Persist ETags in IndexedDB)</td>
+            </tr>
+            <tr>
+              <td><strong>Implementation Complexity</strong></td>
+              <td><span class="badge-neutral">Low</span> (Simple HTML form or single fetch)</td>
+              <td><span class="badge-neutral">Medium-High</span> (Worker pool, presigning API)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Production Code Snippets -->
+  <section id="code-viewer" class="section">
+    <div class="section-header">
+      <div class="section-title-wrap">
+        <span class="section-number">04</span>
+        <div>
+          <h2 class="section-title">Production Code Implementations</h2>
+          <p class="section-subtitle">Real-world implementations in Browser JavaScript, Node.js AWS SDK v3, and REST wire calls</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card code-tabs-card">
+      <div class="code-tabs-header">
+        <div class="code-tabs">
+          <button class="code-tab active" data-tab="browser">🌐 Browser Client (Vanilla JS)</button>
+          <button class="code-tab" data-tab="backend">🟢 Backend Node.js (AWS SDK v3)</button>
+          <button class="code-tab" data-tab="rest">📡 S3 REST Wire Protocol (HTTP/XML)</button>
+        </div>
+        <button id="copyCodeBtn" class="btn btn-tiny btn-secondary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span id="copyCodeText">Copy Code</span>
+        </button>
+      </div>
+
+      <div class="code-tab-content active" id="tab-browser">
+        <pre class="code-block"><code class="language-javascript">// 1. CLIENT-SIDE MULTIPART UPLOADER (Modern Browser ES6+)
+async function uploadFileInMultipart(file, concurrency = 4) {
+  const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB per part (min 5MB)
+  const totalParts = Math.ceil(file.size / CHUNK_SIZE);
+  console.log(`Starting upload: ${file.name} (${file.size} bytes) in ${totalParts} chunks`);
+
+  // Step 1: Request upload session initiation from your backend
+  const { uploadId, key } = await fetch('/api/upload/initiate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileName: file.name, fileSize: file.size, mimeType: file.type })
+  }).then(res => res.json());
+
+  // Step 2: Prepare queue of chunks
+  const partsQueue = Array.from({ length: totalParts }, (_, i) => {
+    const partNumber = i + 1;
+    const start = i * CHUNK_SIZE;
+    const end = Math.min(file.size, start + CHUNK_SIZE);
+    const chunkBlob = file.slice(start, end); // Zero-copy slicing!
+    return { partNumber, chunkBlob };
+  });
+
+  const completedParts = []; // Will collect { PartNumber, ETag }
+
+  // Step 3: Concurrent Worker Pool for Uploads
+  async function uploadWorker() {
+    while (partsQueue.length > 0) {
+      const { partNumber, chunkBlob } = partsQueue.shift();
+      let attempts = 0;
+      let uploaded = false;
+
+      while (!uploaded && attempts < 3) {
+        try {
+          attempts++;
+          // Get presigned PUT URL for this specific part from backend
+          const { presignedUrl } = await fetch('/api/upload/presign-part', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uploadId, key, partNumber })
+          }).then(res => res.json());
+
+          // Direct HTTP PUT to AWS S3 / Cloud Storage
+          const putRes = await fetch(presignedUrl, {
+            method: 'PUT',
+            body: chunkBlob
+          });
+
+          if (!putRes.ok) throw new Error(`HTTP ${putRes.status}`);
+
+          // Extract ETag header from S3 (ensure S3 CORS exposes ETag!)
+          const rawETag = putRes.headers.get('ETag');
+          const eTag = rawETag.replace(/"/g, ''); // strip quotes
+
+          completedParts.push({ PartNumber: partNumber, ETag: eTag });
+          uploaded = true;
+          console.log(`Part #${partNumber} uploaded successfully. ETag: ${eTag}`);
+        } catch (err) {
+          console.warn(`Part #${partNumber} attempt ${attempts} failed:`, err);
+          if (attempts >= 3) throw new Error(`Part #${partNumber} failed permanently.`);
+          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempts))); // Exponential backoff
+        }
+      }
+    }
+  }
+
+  // Run workers concurrently
+  const workers = Array.from({ length: Math.min(concurrency, totalParts) }, () => uploadWorker());
+  await Promise.all(workers);
+
+  // Step 4: Complete Multipart Upload
+  // S3 strictly requires parts sorted by PartNumber ascending!
+  completedParts.sort((a, b) => a.PartNumber - b.PartNumber);
+
+  const completeRes = await fetch('/api/upload/complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uploadId, key, parts: completedParts })
+  }).then(res => res.json());
+
+  console.log('Upload successfully finalized!', completeRes);
+  return completeRes;
+}</code></pre>
+      </div>
+
+      <div class="code-tab-content" id="tab-backend">
+        <pre class="code-block"><code class="language-javascript">// 2. BACKEND NODE.JS CONTROLLER (AWS SDK v3: @aws-sdk/client-s3)
+import { 
+  S3Client, 
+  CreateMultipartUploadCommand, 
+  UploadPartCommand, 
+  CompleteMultipartUploadCommand,
+  AbortMultipartUploadCommand 
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+const s3 = new S3Client({ region: process.env.AWS_REGION });
+const BUCKET = process.env.MEDIA_BUCKET_NAME;
+
+// 1. Initiate Session
+export async function initiateUpload(req, res) {
+  const { fileName, mimeType } = req.body;
+  const key = `uploads/${Date.now()}-${fileName}`;
+
+  const command = new CreateMultipartUploadCommand({
+    Bucket: BUCKET,
+    Key: key,
+    ContentType: mimeType
+  });
+
+  const response = await s3.send(command);
+  return res.json({ uploadId: response.UploadId, key });
+}
+
+// 2. Generate Presigned URL for a Specific Part
+export async function getPresignedPartUrl(req, res) {
+  const { uploadId, key, partNumber } = req.body;
+
+  const command = new UploadPartCommand({
+    Bucket: BUCKET,
+    Key: key,
+    UploadId: uploadId,
+    PartNumber: Number(partNumber)
+  });
+
+  // Presign URL valid for 15 minutes (900 seconds)
+  const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 900 });
+  return res.json({ presignedUrl });
+}
+
+// 3. Complete and Stitch Parts
+export async function completeUpload(req, res) {
+  const { uploadId, key, parts } = req.body;
+
+  const command = new CompleteMultipartUploadCommand({
+    Bucket: BUCKET,
+    Key: key,
+    UploadId: uploadId,
+    MultipartUpload: {
+      Parts: parts // Array of { PartNumber, ETag } sorted ascending
+    }
+  });
+
+  const result = await s3.send(command);
+  return res.json({
+    location: result.Location,
+    eTag: result.ETag, // e.g. "c4ca4238a0b923820dcc509a6f75849b-24"
+    key: result.Key
+  });
+}
+
+// 4. Abort / Cancel Session
+export async function abortUpload(req, res) {
+  const { uploadId, key } = req.body;
+  await s3.send(new AbortMultipartUploadCommand({ Bucket: BUCKET, Key: key, UploadId: uploadId }));
+  return res.json({ status: "aborted" });
+}</code></pre>
+      </div>
+
+      <div class="code-tab-content" id="tab-rest">
+        <pre class="code-block"><code class="language-http">/* 3. RAW S3 REST WIRE PROTOCOL SPECIFICATION */
+
+/* Phase 1: Initiate Multipart Upload */
+POST /videos/drone-4k.mp4?uploads HTTP/1.1
+Host: media-vault.s3.us-east-1.amazonaws.com
+Authorization: AWS4-HMAC-SHA256 ...
+Content-Type: video/mp4
+
+HTTP/1.1 200 OK
+Content-Type: application/xml
+<?xml version="1.0" encoding="UTF-8"?>
+<InitiateMultipartUploadResult>
+  <Bucket>media-vault</Bucket>
+  <Key>videos/drone-4k.mp4</Key>
+  <UploadId>VXBsb2FkIElEIGV4YW1wbGU...</UploadId>
+</InitiateMultipartUploadResult>
+
+/* Phase 2: Upload Individual Part (Executed concurrently for Parts 1..N) */
+PUT /videos/drone-4k.mp4?partNumber=1&uploadId=VXBsb2FkIElEIGV4YW1wbGU... HTTP/1.1
+Host: media-vault.s3.us-east-1.amazonaws.com
+Content-Length: 52428800
+Content-MD5: Q2hlY2tzdW0gRXhhbXBsZSAx...
+
+[52.4 MB Binary Data Stream]
+
+HTTP/1.1 200 OK
+ETag: "1b2cf535f27731c974343645a3985328"
+
+/* Phase 3: Complete Multipart Upload with Manifest */
+POST /videos/drone-4k.mp4?uploadId=VXBsb2FkIElEIGV4YW1wbGU... HTTP/1.1
+Host: media-vault.s3.us-east-1.amazonaws.com
+Content-Type: application/xml
+
+<CompleteMultipartUpload>
+  <Part>
+    <PartNumber>1</PartNumber>
+    <ETag>"1b2cf535f27731c974343645a3985328"</ETag>
+  </Part>
+  <Part>
+    <PartNumber>2</PartNumber>
+    <ETag>"ee977535f27731c974343645a3985444"</ETag>
+  </Part>
+</CompleteMultipartUpload>
+
+HTTP/1.1 200 OK
+<CompleteMultipartUploadResult>
+  <Location>https://media-vault.s3.us-east-1.amazonaws.com/videos/drone-4k.mp4</Location>
+  <Bucket>media-vault</Bucket>
+  <Key>videos/drone-4k.mp4</Key>
+  <ETag>"43a6f44534a66598502f6ae6e2570088-2"</ETag>
+</CompleteMultipartUploadResult></code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Key Concepts Deep-Dive -->
+  <section id="concepts" class="section">
+    <div class="section-header">
+      <div class="section-title-wrap">
+        <span class="section-number">05</span>
+        <div>
+          <h2 class="section-title">Key Architectural Concepts</h2>
+          <p class="section-subtitle">The subtle edge cases and engineering considerations every senior backend engineer must know</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="concepts-grid">
+      <!-- Concept 1 -->
+      <div class="card concept-card">
+        <div class="concept-icon">🏷️</div>
+        <h3 class="concept-title">What is an S3 Compound ETag?</h3>
+        <p class="concept-desc">
+          For standard single-PUT uploads, S3's ETag is the exact hex-encoded MD5 hash of the object.
+          However, for multipart uploads, <strong>it is not the MD5 of the whole file!</strong>
+        </p>
+        <div class="concept-formula">
+          <code>ETag = MD5( binary_md5(part1) + binary_md5(part2) + ... ) + "-<PartCount>"</code>
+        </div>
+        <p class="concept-note">
+          Example: <code>"9b2cf535f27731c974343645a3985328-14"</code> indicates the file was composed of 14 parts.
+          Therefore, you cannot verify a multipart object's integrity by simply running <code>md5sum file.mp4</code> locally without knowing the original chunk sizing!
+        </p>
+      </div>
+
+      <!-- Concept 2 -->
+      <div class="card concept-card">
+        <div class="concept-icon">📏</div>
+        <h3 class="concept-title">S3 Chunk Constraints & Limits</h3>
+        <ul class="concept-list">
+          <li><strong>Minimum Part Size:</strong> <strong>5 MB</strong> (5,242,880 bytes). S3 will reject parts smaller than 5 MB with an <code>EntityTooSmall</code> error, <em>except</em> for the very last part.</li>
+          <li><strong>Maximum Part Size:</strong> <strong>5 GB</strong> per individual chunk.</li>
+          <li><strong>Maximum Part Count:</strong> <strong>10,000 parts</strong> per multipart upload session.</li>
+          <li><strong>Maximum Object Size:</strong> 10,000 parts &times; 5 GB = <strong>50 TB</strong> (S3 limit is 5 TB total object size).</li>
+        </ul>
+        <div class="concept-formula">
+          <code>Optimal Part Size = Math.max(5MB, Math.ceil(fileSize / 10000))</code>
+        </div>
+      </div>
+
+      <!-- Concept 3 -->
+      <div class="card concept-card">
+        <div class="concept-icon">💸</div>
+        <h3 class="concept-title">The Hidden Cost: Orphaned Parts</h3>
+        <p class="concept-desc">
+          When an upload is aborted, interrupted, or abandoned midway, the chunks uploaded so far <strong>do not appear in standard bucket listings</strong>,
+          yet AWS continues to bill you for their storage!
+        </p>
+        <div class="concept-alert">
+          ⚠️ <strong>Mandatory Production Rule:</strong> Always configure an S3 Bucket Lifecycle Rule:
+          <code>AbortIncompleteMultipartUploadAfterDays = 7</code>.
+          This instructs AWS to automatically purge abandoned chunks after 7 days, preventing surprise thousands of dollars in hidden storage charges.
+        </div>
+      </div>
+
+      <!-- Concept 4 -->
+      <div class="card concept-card">
+        <div class="concept-icon">🌐</div>
+        <h3 class="concept-title">Direct-to-S3 vs Proxy Architecture</h3>
+        <p class="concept-desc">
+          <strong>Why not stream chunks through your Node.js/Go server?</strong>
+        </p>
+        <ul class="concept-list">
+          <li><strong>Server Proxy:</strong> If 1,000 users upload 1 GB video files through your API, your servers must ingest 1 TB and egress 1 TB. High bandwidth bills, CPU spikes, and memory buffering.</li>
+          <li><strong>Direct Presigned URLs:</strong> The client streams chunks directly to Amazon S3 edge endpoints. Your backend only signs lightweight tokens (a few bytes). Zero bandwidth costs on your servers!</li>
+        </ul>
+      </div>
+
+      <!-- Concept 5 -->
+      <div class="card concept-card">
+        <div class="concept-icon">💾</div>
+        <h3 class="concept-title">Resumability & Client State Persistence</h3>
+        <p class="concept-desc">
+          What happens if the user accidentally closes the browser tab or loses power?
+        </p>
+        <p class="concept-note">
+          Store the upload session state in browser <code>IndexedDB</code> or <code>localStorage</code>:
+          <code>{ fileHash, uploadId, key, completedParts: [{ PartNumber, ETag }] }</code>.
+          When the user reopens the app, check if an unfinished session exists for that file, query S3's <code>ListParts</code> API, and resume uploading only the missing chunk indices!
+        </p>
+      </div>
+
+      <!-- Concept 6 -->
+      <div class="card concept-card">
+        <div class="concept-icon">🔒</div>
+        <h3 class="concept-title">CORS & Security Considerations</h3>
+        <p class="concept-desc">
+          Because the browser issues direct HTTP <code>PUT</code> requests to AWS S3, proper <strong>CORS (Cross-Origin Resource Sharing)</strong> headers are required on your S3 bucket.
+        </p>
+        <div class="concept-formula">
+          <code>ExposeHeaders: ["ETag"]</code><br>
+          <code>AllowedMethods: ["PUT", "POST", "GET"]</code><br>
+          <code>AllowedOrigins: ["https://yourdomain.com"]</code>
+        </div>
+        <p class="concept-note">
+          Critical detail: If <code>ExposeHeaders: ["ETag"]</code> is omitted in the S3 CORS configuration, the browser's JavaScript will not be able to read the <code>ETag</code> header from the response!
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Interactive Knowledge Check Quiz -->
+  <section id="quiz" class="section">
+    <div class="section-header">
+      <div class="section-title-wrap">
+        <span class="section-number">06</span>
+        <div>
+          <h2 class="section-title">Knowledge Check & Quiz</h2>
+          <p class="section-subtitle">Test your understanding of multipart uploads, S3 quirks, and distributed file transfers</p>
+        </div>
+      </div>
+      <div class="quiz-score-badge" id="quizScoreBadge">Score: 0 / 4</div>
+    </div>
+
+    <div class="quiz-container" id="quizContainer">
+      <!-- Question 1 -->
+      <div class="card quiz-card" data-question="1">
+        <div class="quiz-q-header">
+          <span class="quiz-q-num">Q1</span>
+          <h3 class="quiz-question">Why does an AWS S3 Multipart ETag end with a hyphen and a number (e.g. <code>-14</code>)?</h3>
+        </div>
+        <div class="quiz-options">
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">A</span>
+            It indicates the upload version ID assigned by S3 bucket versioning.
+          </button>
+          <button class="quiz-opt" data-correct="true">
+            <span class="opt-letter">B</span>
+            It indicates the total number of parts that were stitched together to assemble the object.
+          </button>
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">C</span>
+            It represents the number of retry attempts made during upload.
+          </button>
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">D</span>
+            It represents the chunk size in megabytes used by the client.
+          </button>
+        </div>
+        <div class="quiz-feedback hidden"></div>
+      </div>
+
+      <!-- Question 2 -->
+      <div class="card quiz-card" data-question="2">
+        <div class="quiz-q-header">
+          <span class="quiz-q-num">Q2</span>
+          <h3 class="quiz-question">What is the minimum part size allowed for non-final parts in AWS S3 Multipart Upload?</h3>
+        </div>
+        <div class="quiz-options">
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">A</span>
+            1 MB
+          </button>
+          <button class="quiz-opt" data-correct="true">
+            <span class="opt-letter">B</span>
+            5 MB (5,242,880 bytes)
+          </button>
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">C</span>
+            25 MB
+          </button>
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">D</span>
+            There is no minimum size restriction.
+          </button>
+        </div>
+        <div class="quiz-feedback hidden"></div>
+      </div>
+
+      <!-- Question 3 -->
+      <div class="card quiz-card" data-question="3">
+        <div class="quiz-q-header">
+          <span class="quiz-q-num">Q3</span>
+          <h3 class="quiz-question">Why is uploading directly to S3 via Presigned URLs preferred over streaming through your backend server?</h3>
+        </div>
+        <div class="quiz-options">
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">A</span>
+            Presigned URLs encrypt data twice, whereas backend proxying does not use TLS.
+          </button>
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">B</span>
+            It bypasses S3 bucket permissions entirely.
+          </button>
+          <button class="quiz-opt" data-correct="true">
+            <span class="opt-letter">C</span>
+            It removes the bandwidth and RAM bottleneck from your backend, avoiding double-egress costs.
+          </button>
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">D</span>
+            S3 does not support receiving multipart uploads through backend servers.
+          </button>
+        </div>
+        <div class="quiz-feedback hidden"></div>
+      </div>
+
+      <!-- Question 4 -->
+      <div class="card quiz-card" data-question="4">
+        <div class="quiz-q-header">
+          <span class="quiz-q-num">Q4</span>
+          <h3 class="quiz-question">What critical configuration prevents runaway AWS billing for abandoned multipart uploads?</h3>
+        </div>
+        <div class="quiz-options">
+          <button class="quiz-opt" data-correct="true">
+            <span class="opt-letter">A</span>
+            A bucket Lifecycle Rule with <code>AbortIncompleteMultipartUpload</code> configured.
+          </button>
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">B</span>
+            Enabling S3 Object Lock in Governance Mode.
+          </button>
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">C</span>
+            Setting Part Size to exactly 5 MB.
+          </button>
+          <button class="quiz-opt" data-correct="false">
+            <span class="opt-letter">D</span>
+            Using AWS KMS Customer Managed Keys.
+          </button>
+        </div>
+        <div class="quiz-feedback hidden"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="brand-title">Backend Engineering Architecture Series</span>
+        <span class="footer-desc">Interactive visual guide to Multipart Uploads, Cloud Storage, and Resilient File Transfers.</span>
+      </div>
+      <div class="footer-links">
+        <a href="#simulator">Simulator</a>
+        <a href="#workflow">Lifecycle</a>
+        <a href="#comparison">Single vs Multipart</a>
+        <a href="#code-viewer">Code</a>
+        <a href="#concepts">Concepts</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>Built for Node.js Backend Engineers & Distributed Systems Architects</span>
+    </div>
+  </footer>
+
+  <!-- Script File -->
+  <script src="script.js"></script>
+</body>
+</html>
